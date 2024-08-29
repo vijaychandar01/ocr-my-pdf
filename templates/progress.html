@@ -10,13 +10,26 @@
             fetch(`/status/{{ session_id }}`)
                 .then(response => response.json())
                 .then(data => {
-                    document.getElementById('progress-bar').value = data.percent;
-                    document.getElementById('progress-text').innerText = `Overall Progress: ${data.percent.toFixed(2)}% (${data.current_file_index + 1}/${data.total_files} PDFs)`;
-                    document.getElementById('current-file').innerText = `Processing: ${data.filename}`;
-                    document.getElementById('ocr-progress').innerText = `OCR Progress for current PDF: ${data.ocr_progress.toFixed(2)}% (${data.pages_done}/${data.total_pages} pages)`;
-                    document.getElementById('ocr-progress-bar').value = data.ocr_progress;
+                    const progressContainer = document.getElementById('progress-container');
+                    progressContainer.innerHTML = '';
 
-                    if (data.percent < 100) {
+                    // Iterate over all files being processed
+                    for (const fileId in data) {
+                        const fileData = data[fileId];
+                        const fileProgress = `
+                            <div>
+                                <h3>Processing: ${fileData.filename}</h3>
+                                <progress value="${fileData.ocr_progress}" max="100"></progress>
+                                <p>OCR Progress: ${fileData.ocr_progress.toFixed(2)}% (${fileData.pages_done}/${fileData.total_pages} pages)</p>
+                            </div>
+                        `;
+                        progressContainer.innerHTML += fileProgress;
+                    }
+
+                    // Check if all files are done processing
+                    const allFilesDone = Object.values(data).every(file => file.ocr_progress === 100);
+
+                    if (!allFilesDone) {
                         setTimeout(updateProgress, 1000);
                     } else {
                         window.location.href = `/download/{{ session_id }}`;
@@ -44,11 +57,7 @@
 <body>
     <div class="container">
         <h1>Processing Progress</h1>
-        <progress id="progress-bar" value="0" max="100"></progress>
-        <p id="progress-text">Overall Progress: 0%</p>
-        <p id="current-file">Processing: No file</p>
-        <progress id="ocr-progress-bar" value="0" max="100"></progress>
-        <p id="ocr-progress">OCR Progress for current PDF: 0%</p>
+        <div id="progress-container"></div>
         <button id="stop-button" onclick="stopProcessing()">Stop Processing</button>
     </div>
 </body>
